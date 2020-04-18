@@ -19,7 +19,7 @@
     PACKAGES             <- 0
   
   # Enter list of libraries you want to load / packages you want to install 
-    packages <- c("dplyr", "ggplot2", "readxl", "tidyverse", "xlsx")
+    packages <- c("dplyr", "ggplot2", "readxl", "tidyverse")
   
   # If you selected the option to install packages, install them
     if (PACKAGES) {
@@ -60,6 +60,9 @@
     outputfile3 <- file.path(Output,paste0(paste(taskdate, project, purpose, "summ_mand", sep="_"), ".csv"))
     outputfile4 <- file.path(Output,paste0(paste(taskdate, project, purpose, "mod_data", sep="_"), ".csv"))
     
+    outputfile5 <- file.path(Output,paste0(paste(taskdate, project, purpose, "pilot_pop", sep="_"), ".csv"))
+    outputfile6 <- file.path(Output,paste0(paste(taskdate, project, purpose, "pilot_sample", sep="_"), ".csv"))
+
 # ----------------------------------------------------------------------------------------------    
 # Part 3: Load and clean the dataset
 # ----------------------------------------------------------------------------------------------    
@@ -70,7 +73,7 @@
     summary(rawdf)
     
   # Sort by phone number
-    rawdf <- rawdf[order(rawdf$`DISTRICT NAME`, moddf$`MANDAL NAME`, moddf$`PANCHAYAT NAME`), ]  
+    rawdf <- rawdf[order(rawdf$`DISTRICT NAME`, rawdf$`MANDAL NAME`, rawdf$`PANCHAYAT NAME`), ]  
 
   # Remove obs with duplicate phone numbers
     # No priority has been given to which number is retained among a set of dup numbers
@@ -79,7 +82,8 @@
   
   # Convert text to numeric phone number
     moddf$mob_num <- as.numeric(moddf$`MOBILE NUMBER`)
-
+    moddf$JOBCARD <- as.character(moddf$JOBCARD)
+    
   # Remove invalid numbers
     moddf <- moddf[!(moddf$mob_num<=6000000000), ]
   
@@ -128,18 +132,54 @@
     
   # Write results to CSVs
     write_csv(id_info, outputfile1, na = "NA", append = FALSE)
+    write_csv(distsumm, outputfile2, na = "NA", append = FALSE)
+    write_csv(mandsumm, outputfile3, na = "NA", append = FALSE)
+    write_csv(moddf, outputfile4, na = "NA", append = FALSE) # Jobcard precision is lost if you open in Excel but it's safe
     
 # ----------------------------------------------------------------------------------------------    
 # Part 4: Simple random sampling (SRS) for 2 mandals
 # ----------------------------------------------------------------------------------------------    
 
-  # Yadadri Bhuvanagiri, Valigonda
-  # Yadadri Bhuvanagiri, Alair
+  # D = Yadadri Bhuvanagiri, M = Valigonda, id_mand = 56, Has highest number of obs
+    pilot_pop <- select(filter(moddf, id_mand==56), colnames(moddf))
+   
+  # Write results to CSVs
+    write_csv(moddf, outputfile5, na = "NA", append = FALSE)
     
+  # We could choose to stratify by panchayats, there are 36
+  #   pancsumm <- moddf %>%
+  #     group_by(`MANDAL NAME`) %>%
+  #     summarise(dist_name = first(`DISTRICT NAME`),
+  #               mand_name = first(`MANDAL NAME`),
+  #               panc_name = first(`PANCHAYAT NAME`),
+  #               num_panc = n_distinct(`PANCHAYAT NAME`))
+    
+  # Set seed for random number
+    set.seed(20418)
+   
+  # Sample by mandal. This will help when we actually have multiple mandals
+    by_mand <- pilot_pop %>% group_by(id_mand)
+
+  # Sample, we need 400
+    pilot_n <- 400
+    pilot_sample <- sample_n(by_mand, pilot_n)
+    pilot_sample$pw1 <- 1/(pilot_n/nrow(by_mand))
   
-  
-# Save data as .RDS
-  saveRDS(diagnosis, file = outputfile2) 
+  # Distribute by enumerator ID
+    enum_n <- 14
+    pilot_sample$enum_id <- gl(enum_n, (pilot_n/enum_n))
+    
+  # Output the sample
+    pilot_sample$resp_name <- toupper(paste(pilot_sample$"WAGESEEKER NAME", 
+                                    pilot_sample$"HOUSEHOLD NAME", sep=" "))
+    
+    col_order <- c("enum_id", "id_resp", "id_dist2", "DISTRICT NAME", 
+                   "id_mand2", "MANDAL NAME", "PANCHAYAT NAME", 
+                   "HABITATION NAME", "resp_name", "MOBILE NUMBER")
+    pilot_sample_out <- pilot_sample[, col_order]
+    
+  # Write results to CSVs
+    write_csv(pilot_sample_out, outputfile6, na = "NA", append = FALSE)
 
 # ----------------------------------------------------------------------------------------------    
 # THE END
