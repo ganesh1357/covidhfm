@@ -178,6 +178,18 @@
                    "HABITATION NAME", "resp_name", "MOBILE NUMBER")
     pilot_sample_out <- pilot_sample[, col_order]
     
+  # Rename the columns to single words
+    pilot_sample_out <- pilot_sample_out %>% 
+                          rename(
+                            dist_name = `DISTRICT NAME`,
+                            mand_name = `MANDAL NAME`,
+                            panc_name = `PANCHAYAT NAME`,
+                            vill_name = `HABITATION NAME`,
+                            mobi_num1 = `MOBILE NUMBER`,
+                            dist_id = id_dist2,
+                            mand_id = id_mand2
+                          )
+    
   # Write results to CSVs
     write_csv(pilot_sample_out, outputfile6, na = "NA", append = FALSE)
 
