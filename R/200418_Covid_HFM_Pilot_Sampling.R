@@ -45,7 +45,7 @@
   
   # Project subfolders
     
-    taskdate = "200418" # update task date
+    taskdate = "200419" # update task date
     project = "Covid_HFM_Pilot" # update project name
     purpose = "Sampling" # update purpose 
     
@@ -161,13 +161,14 @@
     by_mand <- pilot_pop %>% group_by(id_mand)
 
   # Sample, we need 400
-    pilot_n <- 400
+    pilot_n <- 600
     pilot_sample <- sample_n(by_mand, pilot_n)
     pilot_sample$pw1 <- 1/(pilot_n/nrow(by_mand))
   
   # Distribute by enumerator ID
     enum_n <- 14
     pilot_sample$enum_id <- gl(enum_n, (pilot_n/enum_n))
+    pilot_sample$enum_id <- as.numeric(pilot_sample$enum_id) + 100
     
   # Output the sample
     pilot_sample$resp_name <- toupper(paste(pilot_sample$"WAGESEEKER NAME", 
